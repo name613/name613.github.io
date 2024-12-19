@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>转盘小游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .game-area {
+            text-align: center;
+            flex: 1;
+        }
+        .wheel-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+        }
+        .wheel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 5px solid #000;
+            background: conic-gradient(
+                green 0deg 45deg,
+                yellow 45deg 90deg,
+                green 90deg 135deg,
+                yellow 135deg 180deg,
+                green 180deg 225deg,
+                yellow 225deg 270deg,
+                green 270deg 315deg,
+                yellow 315deg 360deg
+            );
+        }
+        .wheel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid black;
+            mask: repeating-conic-gradient(transparent 0deg 45deg, black 45deg 45deg);
+            -webkit-mask: repeating-conic-gradient(transparent 0deg 45deg, black 45deg 45deg);
+        }
+        .pointer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 20px 80px 20px;
+            border-color: transparent transparent red transparent;
+            transform: translate(-50%, -50%) rotate(0deg);
+            z-index: 10;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        .button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .button:disabled {
+            background-color: #ccc;
+        }
+        .input-container {
+            margin-top: 10px;
+        }
+        .stats {
+            flex: 0 0 150px;
+            text-align: left;
+        }
+        .stats p {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        .game-over {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: red;
+        }
+        .total-stats {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="stats">
+            <p>赢的次数: <span id="wins">0</span></p>
+            <p>输的次数: <span id="losses">0</span></p>
+        </div>
+
+        <div class="game-area">
+            <div class="wheel-container">
+                <div class="wheel" id="wheel"></div>
+                <div class="pointer"></div>
+            </div>
+            <div class="controls">
+                <div class="input-container">
+                    <label for="betAmount">赌注金额: </label>
+                    <input type="number" id="betAmount" value="5" min="1" />
+                </div>
+                <div class="select-color">
+                    <label>选择颜色: </label>
+                    <label><input type="radio" name="color" value="green" checked> 绿色</label>
+                    <label><input type="radio" name="color" value="yellow"> 黄色</label>
+                </div>
+                <button class="button" id="startButton">开始</button>
+            </div>
+            <div class="result" id="result"></div>
+            <div class="game-over" id="gameOver"></div>
+            <div class="total-stats" id="totalStats"></div>
+        </div>
+
+        <div class="stats">
+            <p>当前余额:</p>
+            <p id="balance-right">50</p>
+        </div>
+    </div>
+
+    <script>
+        let balance = 50; 
+        let wins = 0;
+        let losses = 0;
+        let isSpinning = false;
+
+        const wheel = document.getElementById("wheel");
+        const startButton = document.getElementById("startButton");
+        const betAmountInput = document.getElementById("betAmount");
+        const resultDisplay = document.getElementById("result");
+        const winsDisplay = document.getElementById("wins");
+        const lossesDisplay = document.getElementById("losses");
+        const balanceRightDisplay = document.getElementById("balance-right");
+        const gameOverDisplay = document.getElementById("gameOver");
+        const totalStatsDisplay = document.getElementById("totalStats");
+
+        function updateStats() {
+            winsDisplay.textContent = wins;
+            lossesDisplay.textContent = losses;
+            balanceRightDisplay.textContent = balance;
+        }
+
+        function updateTotalStats() {
+            totalStatsDisplay.textContent = `总赌局次数: ${wins + losses} | 赢次数: ${wins} | 输次数: ${losses}`;
+        }
+
+        startButton.addEventListener('click', function () {
+            if (isSpinning) return;
+
+            const betAmount = parseInt(betAmountInput.value);
+            const selectedColor = document.querySelector('input[name="color"]:checked').value;
+
+            if (betAmount <= 0 || betAmount > balance) {
+                resultDisplay.textContent = "你没有这么多钱！";
+                resultDisplay.style.color = "red";
+                return;
+            }
+
+            balance -= betAmount;
+
+            let angle = Math.random() * 360;
+
+            isSpinning = true;
+            wheel.style.transition = 'transform 1.5s ease-out';  // 改为1.5秒转速更快
+            wheel.style.transform = `rotate(${angle + 360 * 10}deg)`;  // 旋转10圈
+
+            setTimeout(() => {
+                isSpinning = false;
+                const normalizedAngle = (angle % 360 + 360) % 360;
+                const segment = Math.floor(normalizedAngle / 45);
+                const resultColor = segment % 2 === 0 ? "green" : "yellow";
+
+                // 判断颜色是否与选择的颜色一致
+                if (resultColor === selectedColor) {
+                    wins++;
+                    balance += betAmount * 2;
+                    resultDisplay.textContent = `恭喜，你赢了！颜色是 ${resultColor}`;
+                    resultDisplay.style.color = "green";
+                } else {
+                    losses++;
+                    resultDisplay.textContent = `很遗憾，你输了！颜色是 ${resultColor}`;
+                    resultDisplay.style.color = "red";
+                }
+
+                updateStats();
+                updateTotalStats();
+
+                // 检查余额是否为0或大于999
+                if (balance >= 999) {
+                    gameOverDisplay.textContent = "恭喜可爱的富翁，你暴富赢了，游戏结束！";
+                    gameOverDisplay.style.color = "green";
+                    startButton.disabled = true;
+                } else if (balance <= 0) {
+                    gameOverDisplay.textContent = "很遗憾尊敬的赌狗，你没钱了，游戏结束！";
+                    gameOverDisplay.style.color = "red";
+                    startButton.disabled = true;
+                }
+            }, 1500);  // 转速加快，时长为1.5秒
+        });
+
+        // 点击确认按钮重新开始游戏
+        function resetGame() {
+            balance = 50;
+            wins = 0;
+            losses = 0;
+            startButton.disabled = false;
+            gameOverDisplay.textContent = "";
+            updateStats();
+            updateTotalStats();
+        }
+
+        // 每次点击“确认”按钮后重置游戏
+        document.getElementById('gameOver').addEventListener('click', resetGame);
+    </script>
+</body>
+</html>
