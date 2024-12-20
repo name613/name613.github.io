@@ -6,15 +6,25 @@
     <title>转盘小游戏</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Press Start 2P', cursive;
             text-align: center;
             padding: 20px;
-            background-color: #f0f0f0;
+            background-color: #222;
+            color: #fff;
+            background-image: url('https://www.pixeljoint.com/files/icons/pixelated-background-1.png');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         .container {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            margin-top: 20px;
         }
         .game-area {
             text-align: center;
@@ -33,41 +43,36 @@
             width: 100%;
             height: 100%;
             border-radius: 50%;
-            border: 5px solid #000;
+            border: 5px solid #fff;
             background: conic-gradient(
-                green 0deg 45deg,
-                yellow 45deg 90deg,
-                green 90deg 135deg,
-                yellow 135deg 180deg,
-                green 180deg 225deg,
-                yellow 225deg 270deg,
-                green 270deg 315deg,
-                yellow 315deg 360deg
+                yellow 0deg 45deg,
+                green 45deg 90deg,
+                yellow 90deg 135deg,
+                green 135deg 180deg,
+                yellow 180deg 225deg,
+                green 225deg 270deg,
+                yellow 270deg 315deg,
+                green 315deg 360deg
             );
         }
-        .wheel::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            border: 2px solid black;
-            mask: repeating-conic-gradient(transparent 0deg 45deg, black 45deg 45deg);
-            -webkit-mask: repeating-conic-gradient(transparent 0deg 45deg, black 45deg 45deg);
-        }
-        .pointer {
+        .cat {
+            font-size: 50px;
+            color: gray;
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 0;
-            height: 0;
-            border-style: solid;
-            border-width: 0 20px 80px 20px;
-            border-color: transparent transparent red transparent;
-            transform: translate(-50%, -50%) rotate(0deg);
-            z-index: 10;
+            transform: translate(-50%, -50%);
+        }
+        .cat::after {
+            content: '🐱';
+        }
+        .cat-img {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50px;
+            height: 50px;
+            transform: translate(-50%, -50%);
         }
         .controls {
             margin-top: 20px;
@@ -83,7 +88,7 @@
             margin: 10px;
         }
         .button:disabled {
-            background-color: #ccc;
+            background-color: #888;
         }
         .input-container {
             margin-top: 10px;
@@ -91,6 +96,7 @@
         .stats {
             flex: 0 0 150px;
             text-align: left;
+            margin-top: 20px;
         }
         .stats p {
             font-size: 18px;
@@ -112,67 +118,67 @@
             margin-top: 20px;
             font-size: 18px;
         }
+
+        @keyframes pawAnimation {
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
     </style>
 </head>
 <body>
+    <h1>我要报警</h1>
     <div class="container">
         <div class="stats">
-            <p>赢的次数: <span id="wins">0</span></p>
-            <p>输的次数: <span id="losses">0</span></p>
+            <p>剩余金额: <span id="balance-left">50</span></p>
+            <p>赌注金额: <input type="number" id="betAmount" value="5" min="1" /></p>
+            <p>胜利次数: <span id="winCount">0</span></p>
+            <p>失败次数: <span id="lossCount">0</span></p>
         </div>
 
         <div class="game-area">
             <div class="wheel-container">
                 <div class="wheel" id="wheel"></div>
-                <div class="pointer"></div>
+                <img src="https://th.bing.com/th/id/OIP.vMUd9Ta1ZR8FY-Hl5rLkCgHaEN?rs=1&pid=ImgDetMain" class="cat-img" alt="猫咪表情" />
             </div>
             <div class="controls">
-                <div class="input-container">
-                    <label for="betAmount">赌注金额: </label>
-                    <input type="number" id="betAmount" value="5" min="1" />
-                </div>
                 <div class="select-color">
                     <label>选择颜色: </label>
-                    <label><input type="radio" name="color" value="green" checked> 绿色</label>
-                    <label><input type="radio" name="color" value="yellow"> 黄色</label>
+                    <label><input type="radio" name="color" value="yellow" checked> 黄色</label>
+                    <label><input type="radio" name="color" value="green"> 绿色</label>
                 </div>
                 <button class="button" id="startButton">开始</button>
+                <button class="button" id="resetButton" style="display: none;">重新开始</button>
             </div>
             <div class="result" id="result"></div>
             <div class="game-over" id="gameOver"></div>
-            <div class="total-stats" id="totalStats"></div>
-        </div>
-
-        <div class="stats">
-            <p>当前余额:</p>
-            <p id="balance-right">50</p>
         </div>
     </div>
 
     <script>
-        let balance = 50; 
+        let balance = 50;
         let wins = 0;
         let losses = 0;
         let isSpinning = false;
+        let spinSpeed = 1;
 
         const wheel = document.getElementById("wheel");
         const startButton = document.getElementById("startButton");
+        const resetButton = document.getElementById("resetButton");
         const betAmountInput = document.getElementById("betAmount");
         const resultDisplay = document.getElementById("result");
-        const winsDisplay = document.getElementById("wins");
-        const lossesDisplay = document.getElementById("losses");
-        const balanceRightDisplay = document.getElementById("balance-right");
+        const balanceLeftDisplay = document.getElementById("balance-left");
+        const winCountDisplay = document.getElementById("winCount");
+        const lossCountDisplay = document.getElementById("lossCount");
         const gameOverDisplay = document.getElementById("gameOver");
-        const totalStatsDisplay = document.getElementById("totalStats");
 
         function updateStats() {
-            winsDisplay.textContent = wins;
-            lossesDisplay.textContent = losses;
-            balanceRightDisplay.textContent = balance;
-        }
-
-        function updateTotalStats() {
-            totalStatsDisplay.textContent = `总赌局次数: ${wins + losses} | 赢次数: ${wins} | 输次数: ${losses}`;
+            balanceLeftDisplay.textContent = balance;
+            winCountDisplay.textContent = wins;
+            lossCountDisplay.textContent = losses;
         }
 
         startButton.addEventListener('click', function () {
@@ -192,17 +198,19 @@
             let angle = Math.random() * 360;
 
             isSpinning = true;
-            wheel.style.transition = 'transform 1.5s ease-out';  // 改为1.5秒转速更快
-            wheel.style.transform = `rotate(${angle + 360 * 10}deg)`;  // 旋转10圈
+            wheel.style.transition = 'transform 1s ease-out';
+            wheel.style.transform = `rotate(${angle + 360 * 5}deg)`; 
+
+            spinSpeed += 0.5;  // 每次转盘的速度递增
 
             setTimeout(() => {
                 isSpinning = false;
                 const normalizedAngle = (angle % 360 + 360) % 360;
                 const segment = Math.floor(normalizedAngle / 45);
-                const resultColor = segment % 2 === 0 ? "green" : "yellow";
+                const resultColor = segment % 2 === 0 ? "yellow" : "green";
 
-                // 判断颜色是否与选择的颜色一致
-                if (resultColor === selectedColor) {
+                const winLossFactor = Math.random() > 0.5 ? 2 : 0; // 小猫心情随机，胜负也随机
+                if (resultColor === selectedColor && winLossFactor > 0) {
                     wins++;
                     balance += betAmount * 2;
                     resultDisplay.textContent = `恭喜，你赢了！颜色是 ${resultColor}`;
@@ -214,34 +222,33 @@
                 }
 
                 updateStats();
-                updateTotalStats();
 
-                // 检查余额是否为0或大于999
                 if (balance >= 999) {
-                    gameOverDisplay.textContent = "恭喜可爱的富翁，你暴富赢了，游戏结束！";
+                    gameOverDisplay.textContent = "恭喜你暴富，游戏结束！";
                     gameOverDisplay.style.color = "green";
                     startButton.disabled = true;
+                    resetButton.style.display = "inline-block";
                 } else if (balance <= 0) {
-                    gameOverDisplay.textContent = "很遗憾尊敬的赌狗，你没钱了，游戏结束！";
+                    gameOverDisplay.textContent = "很遗憾，你没钱了，游戏结束！";
                     gameOverDisplay.style.color = "red";
                     startButton.disabled = true;
+                    resetButton.style.display = "inline-block";
                 }
-            }, 1500);  // 转速加快，时长为1.5秒
+            }, 1000);
         });
 
-        // 点击确认按钮重新开始游戏
+        resetButton.addEventListener('click', resetGame);
+
         function resetGame() {
             balance = 50;
             wins = 0;
             losses = 0;
+            spinSpeed = 1;
             startButton.disabled = false;
+            resetButton.style.display = "none";
             gameOverDisplay.textContent = "";
             updateStats();
-            updateTotalStats();
         }
-
-        // 每次点击“确认”按钮后重置游戏
-        document.getElementById('gameOver').addEventListener('click', resetGame);
     </script>
 </body>
 </html>
